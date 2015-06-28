@@ -26,8 +26,10 @@ for {
                     queue.pop()
                case job = <- in:
                     queue.push(job)
+          }
      } else {
           queue.push(<- in)
+     }
 }
 ```
 select可以同时等待多个channel,所以当有数据进来或者出去时，都可以触发相应的操作。
