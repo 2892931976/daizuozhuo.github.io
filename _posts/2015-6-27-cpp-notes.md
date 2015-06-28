@@ -90,4 +90,11 @@ struct Foo<int, T2> : Goo<T2>
     }
 };
 ```
-		
+###虚函数中的final和override	
+C++11中新加入了final和override操作符，使用override表明该函数覆盖了基类的虚函数，
+如果没有覆盖，编译器就会报错。final则表明之后不能再覆盖这个函数了。
+
+```
+void f1(int) const ovverride;
+void f2(int) const final;
+```

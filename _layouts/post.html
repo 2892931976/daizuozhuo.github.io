@@ -4,15 +4,13 @@ layout: default
 
 <article class="post">
   <h1>{{ page.title }}</h1>
+  <i class="fa fa-calendar date">{{ page.date | date: " %B %e, %Y" }}</i>
   <div class="entry">
     {{ content }}
   </div>
 
-  <div class="date">
-    Written on {{ page.date | date: "%B %e, %Y" }}
-  </div>
   <div>
-      如果觉得有用，请点star -->
+      如果觉得有用，请点star <i class="fa fa-long-arrow-right"></i>
    <iframe src="https://ghbtns.com/github-btn.html?user=daizuozhuo&repo=daizuozhuo.github.io&type=star&count=true&size=large" frameborder="0" scrolling="0" width="100px" height="30px"></iframe>
    </div>
   {% include duoshuo.html %}
