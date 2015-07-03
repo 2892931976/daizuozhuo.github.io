@@ -3,7 +3,7 @@ layout: post
 title: Process, Thread, Locks
 ---
 
-为准备校招，今天复习了一下线程进程这些基本概念。
+今天来复习一下线程进程这些基本概念。
 ###process
 拥有独立的adress table, 进程之间的变量和数据不共享，需要通过进程间通信来交流，如pipe, file, socket, signal.
 
