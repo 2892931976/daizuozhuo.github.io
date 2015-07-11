@@ -28,7 +28,7 @@ Raft是因为Paxos太难懂太难以实现而提出的,目的是在可靠性不�
 Raft把一致性问题分解成为三个小问题:
 
 1. leader election 选举
-2. log replication 日志复制(分发)
+2. log replication 日志复制,同步
 3. safety 安全性
 
 ### 基本概念
@@ -37,13 +37,19 @@ Raft把一致性问题分解成为三个小问题:
 - follower: 不发request而只会回复leader和candidate的request.
 - leader: 处理client发过来的请求
 - candidate: leader的候选人
+![server states](../images/server-states.png)
 
 Raft把时间分为terms. 每一个term开始时都进行一次选举. 每一个term里最多有一个leader, 或者没有leader.
 
-算法需要两种RPC, RequestVote RPC:由candidates在选举过程中发起, AppendEntries RPC 由leader发起用来分发日志
+### RPC实现
+算法需要两种RPC, RequestVote RPC:由candidates在选举过程中发起,当另外一个server收到这个RPC之后, 只有当对方term和log都至少和自己的一样新的时候才会投赞成票,收到多数赞成票的candidate会当选leader. 
+![request vote](../images/request-vote.png)
+
+AppendEntries RPC 由leader发起用来分发日志, 强迫follwer的log和自己一致.
+![append entries](../images/append-entries.png)
 
 ### Leader election
-如果一个follower在election timeout的时间里没有收到leader的信息,就进入新的term,转成candidate,给自己投票,发起选举 ReQuestVote RPC. 这个状态持续到下面三个状态中的一个:
+如果一个follower在election timeout的时间里没有收到leader的信息,就进入新的term,转成candidate,给自己投票,发起选举 RequestVote RPC. 这个状态持续到发生下面三个中的任意事件:
 	
 1. 它赢得选举
 2. 另外有Server获得选举
@@ -67,6 +73,8 @@ Leader completeness property:
 ````
 	
 这样就是完整的Raft算法了.
+
+注:图片都来自Paper In Search of an Understandable Consensus Algorithm
  
 
 
