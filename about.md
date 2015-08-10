@@ -13,6 +13,8 @@ and I am developing a distributed computing framework for computer vision tasks 
 I will be graduated in 2016 so feel free to contact if you have suitable positions.
 
 See my [resume](/images/zuozhuo.pdf).
+[简历](/images/戴作卓_香港科技大学.pdf).
+
 ### Contact me
 
 [daizuozhuo@gmail.com](mailto:daizuozhuo@gmail.com)
