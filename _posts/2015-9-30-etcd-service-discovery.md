@@ -116,4 +116,4 @@ func (w *Worker) HeartBeat() {
 	}
 }
 ```
-完整的代码可以在在github [zrpc-service-discovery](http://github.com/daizuozhuo/zrpc-service-discovery)上下载.
+完整的代码可以在在github [etcd-service-discovery](http://github.com/daizuozhuo/etcd-service-discovery)上下载.
