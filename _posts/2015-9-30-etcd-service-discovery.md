@@ -2,7 +2,7 @@
 layout: post
 title: 用etcd做服务发现及Go代码示例 
 ---
-[之前](/kubernetes-and-zrpc/)说到要让我们的系统zrpc可以动态调整集群大小. 那么首先就要支持服务发现, 就是说当一个新的节点启动时,可以将自己的信息注册给master, 让master把它加入到集群里, 关闭之后也可以把自己从集群中删除. 既然是用Go语言, 我们采用etcd来做服务发现, 在我们这个情况下其实就是一个membership protocol, 用来维护集群成员的信息. 实现时发现线在网上的etcd Go API的教程都是采用`go-etcd`这个已经被废弃的库, 官方推荐使用`etcd/client`, 用法跟以前的稍有不同, 我就写一个简短的示例好了.
+[之前](/kubernetes-and-zrpc/)说到要让我们的系统zrpc可以动态调整集群大小. 那么首先就要支持服务发现, 就是说当一个新的节点启动时,可以将自己的信息注册给master, 让master把它加入到集群里, 关闭之后也可以把自己从集群中删除. 既然是用Go语言, 我们采用etcd来做服务发现, 在我们这个情况下其实就是一个membership protocol, 用来维护集群成员的信息. 实现时发现现在网上的etcd Go API的教程都是采用`go-etcd`这个已经被废弃的库, 官方推荐使用`etcd/client`, 用法跟以前的稍有不同, 我就写一个简短的示例好了.
 
 整个代码的思路很简单, worker启动时向etcd注册自己的信息,并设置一个过期时间TTL,每隔一段时间更新这个TTL,如果该worker挂掉了,这个TTL就会expire. master则监听`workers/`这个etcd directory, 根据检测到的不同action来增加, 更新, 或删除worker.
 

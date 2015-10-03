@@ -293,6 +293,15 @@ footer {
     position: relative;
     top: -25px;
     margin-bottom: -20px;
+    @include mobile {
+        top: 0px;
+        margin-bottom: 0px;
+        clear: left;
+        float: none;
+        margin-top: 9px;
+        display: block;
+        font-size: 16px;
+    }
 }
 
 .widget-area {
