@@ -4,7 +4,6 @@ title: Cassandra Paper Review
 ---
 
 这是读完 A. Lakshman, P. Malik, ‘‘Cassandra: a Decentralized Structured Storage System,’’ ACM SIGOPS Operating Systems Review, 2010. 的总结.
-
 ##Summary
 This paper presents a distributed structured storage system named Cassandra which meet reliability and scalability. Cassandra is developed to solve Facebook Inbox Search problem.
 
