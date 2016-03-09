@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Golang RPC 实践及填坑
+title: Golang RPC 实践及改进
 ---
 一直用Golang标准库里的的RPC package来进行远程调用,简单好用.
 但是随着任务数量的增大, 发现简单的像包里面的示例那样的代码出现了各种各样的问题,下面就把我踩过的一些坑记录一下吧.
@@ -8,28 +8,28 @@ title: Golang RPC 实践及填坑
 
 server.go
 
-```Go
+``` go
 func ListenRPC() {
-	rpc.Register(NewWorker())
-	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", ":4200")
-	if e != nil {
-		log.Fatal("Error: listen 4200 error:", e)
-	}
- 	go http.Serve(l, nil)
+    rpc.Register(NewWorker())
+    rpc.HandleHTTP()
+    l, e := net.Listen("tcp", ":4200")
+    if e != nil {
+        log.Fatal("Error: listen 4200 error:", e)
+    }
+    go http.Serve(l, nil)
 }
 ```
 
 client.go
 
-```Go
+``` go
 func call(srv string, rpcname string, args interface{}, reply interface{}) error {
-	c, errx := rpc.DialHTTP("tcp", srv+":4200")
-	if errx != nil {
-		return fmt.Errorf("ConnectError: %s", errx.Error())
-	}
-	defer c.Close()
-	return c.Call(rpcname, args, reply)
+    c, errx := rpc.DialHTTP("tcp", srv+":4200")
+    if errx != nil {
+        return fmt.Errorf("ConnectError: %s", errx.Error())
+    }
+    defer c.Close()
+    return c.Call(rpcname, args, reply)
 }
 ```
 
@@ -39,36 +39,36 @@ func call(srv string, rpcname string, args interface{}, reply interface{}) error
 
 server.go
 
-```Go
+```go
 func ListenRPC() {
-	rpc.Register(NewWorker())
-	l, e := net.Listen("tcp", ":4200")
-	if e != nil {
-		log.Fatal("Error: listen 4200 error:", e)
-	}
-	go func() {
-		for {
-			conn, err := l.Accept()
-			if err != nil {
-				log.Print("Error: accept rpc connection", err.Error())
-				continue
-			}
-			go rpc.ServeConn(conn)
-		}
-	}()
+    rpc.Register(NewWorker())
+    l, e := net.Listen("tcp", ":4200")
+    if e != nil {
+        log.Fatal("Error: listen 4200 error:", e)
+    }
+    go func() {
+        for {
+            conn, err := l.Accept()
+            if err != nil {
+                log.Print("Error: accept rpc connection", err.Error())
+                continue
+            }
+            go rpc.ServeConn(conn)
+        }
+    }()
 }
 ```
 
 client.go
 
-```Go
+```go
 func call(srv string, rpcname string, args interface{}, reply interface{}) error {
     c, errx := rpc.Dial("tcp", srv+":4200")
-	if errx != nil {
-		return fmt.Errorf("ConnectError: %s", errx.Error())
-	}
-	defer c.Close()
-	return c.Call(rpcname, args, reply)
+    if errx != nil {
+        return fmt.Errorf("ConnectError: %s", errx.Error())
+    }
+    defer c.Close()
+    return c.Call(rpcname, args, reply)
 }
 ```
 
@@ -84,134 +84,134 @@ net.DialTimeout函数.
 
 server.go
 
-```Go
+```go
 func TimeoutCoder(f func(interface{}) error, e interface{}, msg string) error {
-	echan := make(chan error, 1)
-	go func() { echan <- f(e) }()
-	select {
-	case e := <-echan:
-		return e
-	case <-time.After(time.Minute):
-		return fmt.Errorf("Timeout %s", msg)
-	}
+    echan := make(chan error, 1)
+    go func() { echan <- f(e) }()
+    select {
+    case e := <-echan:
+        return e
+    case <-time.After(time.Minute):
+        return fmt.Errorf("Timeout %s", msg)
+    }
 }
 func (c *gobServerCodec) ReadRequestHeader(r *rpc.Request) error {
-	return TimeoutCoder(c.dec.Decode, r, "server read request header")
+    return TimeoutCoder(c.dec.Decode, r, "server read request header")
 }
 
 func (c *gobServerCodec) ReadRequestBody(body interface{}) error {
-	return TimeoutCoder(c.dec.Decode, body, "server read request body")
+    return TimeoutCoder(c.dec.Decode, body, "server read request body")
 }
 
 func (c *gobServerCodec) WriteResponse(r *rpc.Response, body interface{}) (err error) {
-	if err = TimeoutCoder(c.enc.Encode, r, "server write response"); err != nil {
-		if c.encBuf.Flush() == nil {
-			log.Println("rpc: gob error encoding response:", err)
-			c.Close()
-		}
-		return
-	}
-	if err = TimeoutCoder(c.enc.Encode, body, "server write response body"); err != nil {
-		if c.encBuf.Flush() == nil {
-			log.Println("rpc: gob error encoding body:", err)
-			c.Close()
-		}
-		return
-	}
-	return c.encBuf.Flush()
+    if err = TimeoutCoder(c.enc.Encode, r, "server write response"); err != nil {
+        if c.encBuf.Flush() == nil {
+            log.Println("rpc: gob error encoding response:", err)
+            c.Close()
+        }
+        return
+    }
+    if err = TimeoutCoder(c.enc.Encode, body, "server write response body"); err != nil {
+        if c.encBuf.Flush() == nil {
+            log.Println("rpc: gob error encoding body:", err)
+            c.Close()
+        }
+        return
+    }
+    return c.encBuf.Flush()
 }
 
 func (c *gobServerCodec) Close() error {
-	if c.closed {
-		// Only call c.rwc.Close once; otherwise the semantics are undefined.
-		return nil
-	}
-	c.closed = true
-	return c.rwc.Close()
+    if c.closed {
+        // Only call c.rwc.Close once; otherwise the semantics are undefined.
+        return nil
+    }
+    c.closed = true
+    return c.rwc.Close()
 }
 
 func ListenRPC() {
-	rpc.Register(NewWorker())
-	l, e := net.Listen("tcp", ":4200")
-	if e != nil {
-		log.Fatal("Error: listen 4200 error:", e)
-	}
-	go func() {
-		for {
-			conn, err := l.Accept()
-			if err != nil {
-				log.Print("Error: accept rpc connection", err.Error())
-				continue
-			}
-			go func(conn net.Conn) {
-				buf := bufio.NewWriter(conn)
-				srv := &gobServerCodec{
-					rwc:    conn,
-					dec:    gob.NewDecoder(conn),
-					enc:    gob.NewEncoder(buf),
-					encBuf: buf,
-				}
-				err = rpc.ServeRequest(srv)
-				if err != nil {
-					log.Print("Error: server rpc request", err.Error())
-				}
-				srv.Close()
-			}(conn)
-		}
-	}()
+    rpc.Register(NewWorker())
+    l, e := net.Listen("tcp", ":4200")
+    if e != nil {
+        log.Fatal("Error: listen 4200 error:", e)
+    }
+    go func() {
+        for {
+            conn, err := l.Accept()
+            if err != nil {
+                log.Print("Error: accept rpc connection", err.Error())
+                continue
+            }
+            go func(conn net.Conn) {
+                buf := bufio.NewWriter(conn)
+                srv := &gobServerCodec{
+                    rwc:    conn,
+                    dec:    gob.NewDecoder(conn),
+                    enc:    gob.NewEncoder(buf),
+                    encBuf: buf,
+                }
+                err = rpc.ServeRequest(srv)
+                if err != nil {
+                    log.Print("Error: server rpc request", err.Error())
+                }
+                srv.Close()
+            }(conn)
+        }
+    }()
 }
 ```
 
 client.go
 
-```Go
+```go
 type gobClientCodec struct {
-	rwc    io.ReadWriteCloser
-	dec    *gob.Decoder
-	enc    *gob.Encoder
-	encBuf *bufio.Writer
+    rwc    io.ReadWriteCloser
+    dec    *gob.Decoder
+    enc    *gob.Encoder
+    encBuf *bufio.Writer
 }
 
 func (c *gobClientCodec) WriteRequest(r *rpc.Request, body interface{}) (err error) {
-	if err = TimeoutCoder(c.enc.Encode, r, "client write request"); err != nil {
-		return
-	}
-	if err = TimeoutCoder(c.enc.Encode, body, "client write request body"); err != nil {
-		return
-	}
-	return c.encBuf.Flush()
+    if err = TimeoutCoder(c.enc.Encode, r, "client write request"); err != nil {
+        return
+    }
+    if err = TimeoutCoder(c.enc.Encode, body, "client write request body"); err != nil {
+        return
+    }
+    return c.encBuf.Flush()
 }
 
 func (c *gobClientCodec) ReadResponseHeader(r *rpc.Response) error {
-	return c.dec.Decode(r)
+    return c.dec.Decode(r)
 }
 
 func (c *gobClientCodec) ReadResponseBody(body interface{}) error {
-	return c.dec.Decode(body)
+    return c.dec.Decode(body)
 }
 
 func (c *gobClientCodec) Close() error {
-	return c.rwc.Close()
+    return c.rwc.Close()
 }
 
 func call(srv string, rpcname string, args interface{}, reply interface{}) error {
-	conn, err := net.DialTimeout("tcp", srv+":4200", time.Second*10)
-	if err != nil {
-		return fmt.Errorf("ConnectError: %s", err.Error())
-	}
-	encBuf := bufio.NewWriter(conn)
-	codec := &gobClientCodec{conn, gob.NewDecoder(conn), gob.NewEncoder(encBuf), encBuf}
-	c := rpc.NewClientWithCodec(codec)
-	err = c.Call(rpcname, args, reply)
-	errc := c.Close()
-	if err != nil && errc != nil {
-		return fmt.Errorf("%s %s", err, errc)
-	}
-	if err != nil {
-		return err
-	} else {
-		return errc
-	}
+    conn, err := net.DialTimeout("tcp", srv+":4200", time.Second*10)
+    if err != nil {
+        return fmt.Errorf("ConnectError: %s", err.Error())
+    }
+    encBuf := bufio.NewWriter(conn)
+    codec := &gobClientCodec{conn, gob.NewDecoder(conn), gob.NewEncoder(encBuf), encBuf}
+    c := rpc.NewClientWithCodec(codec)
+    err = c.Call(rpcname, args, reply)
+    errc := c.Close()
+    if err != nil && errc != nil {
+        return fmt.Errorf("%s %s", err, errc)
+    }
+    if err != nil {
+        return err
+    } else {
+        return errc
+    }
 }
 
 ```

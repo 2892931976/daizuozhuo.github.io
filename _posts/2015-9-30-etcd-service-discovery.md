@@ -8,60 +8,60 @@ title: 用etcd做服务发现及Go代码示例
 
 首先我们要建立一个etcd client:
 
-```Go
+```go
 func NewMaster(endpoints []string) {
-	cfg := client.Config{
-		Endpoints:               endpoints,
-		Transport:               client.DefaultTransport,
-		HeaderTimeoutPerRequest: time.Second,
-	}
+    cfg := client.Config{
+        Endpoints:               endpoints,
+        Transport:               client.DefaultTransport,
+        HeaderTimeoutPerRequest: time.Second,
+    }
 
-	etcdClient, err := client.New(cfg)
-	if err != nil {
-		log.Fatal("Error: cannot connec to etcd:", err)
-	}
-	master := &Master{
-		members: make(map[string]*Member),
-		KeysAPI: client.NewKeysAPI(etcdClient),
-	}
-	go master.WatchWorkers()
-	return master
+    etcdClient, err := client.New(cfg)
+    if err != nil {
+        log.Fatal("Error: cannot connec to etcd:", err)
+    }
+    master := &Master{
+        members: make(map[string]*Member),
+        KeysAPI: client.NewKeysAPI(etcdClient),
+    }
+    go master.WatchWorkers()
+    return master
 }
 ```
 这里我们先建立一个etcd client, 然后把它的key API放进master里面,这样我们以后只需要通过这个API来跟etcd进行交互. Endpoints是指etcd服务器们的地址, 如"http://192.168.0.1:2379"等. `go master.WatchWorkers()` 这一行启动一个Go routine来监控节点的情况. 下面是WatchWorkers的代码:
 
-```Go
+```go
 func (m *Master) WatchWorkers() {
-	api := m.KeysAPI
-	watcher := api.Watcher("workers/", &client.WatcherOptions{
-		Recursive: true,
-	})
-	for {
-		res, err := watcher.Next(context.Background())
-		if err != nil {
-			log.Println("Error watch workers:", err)
-			break
-		}
-		if res.Action == "expire" {
-			member, ok := m.members[res.Node.Key]
-			if ok {
-				member.InGroup = false
-			}
-		} else if res.Action == "set" || res.Action == "update"{
-			info := &WorkerInfo{}
-			err := json.Unmarshal([]byte(res.Node.Value), info)
-			if err != nil {
-				log.Print(err)
-			}
-			if _, ok := m.members[info.Name]; ok {
-				m.UpdateWorker(info)
-			} else {
-				m.AddWorker(info)
-			}
-		} else if res.Action == "delete" {
-			delete(m.members, res.Node.Key)
-		}
-	}
+    api := m.KeysAPI
+    watcher := api.Watcher("workers/", &client.WatcherOptions{
+        Recursive: true,
+    })
+    for {
+        res, err := watcher.Next(context.Background())
+        if err != nil {
+            log.Println("Error watch workers:", err)
+            break
+        }
+        if res.Action == "expire" {
+            member, ok := m.members[res.Node.Key]
+            if ok {
+                member.InGroup = false
+            }
+        } else if res.Action == "set" || res.Action == "update"{
+            info := &WorkerInfo{}
+            err := json.Unmarshal([]byte(res.Node.Value), info)
+            if err != nil {
+                log.Print(err)
+            }
+            if _, ok := m.members[info.Name]; ok {
+                m.UpdateWorker(info)
+            } else {
+                m.AddWorker(info)
+            }
+        } else if res.Action == "delete" {
+            delete(m.members, res.Node.Key)
+        }
+    }
 
 }
 ```
@@ -70,50 +70,50 @@ WatcherOptions里recursive指的是要监听这个文件夹下面所有节点的
 worker这边也跟master类似, 保存一个etcd KeysAPI, 通过它与etcd交互.然后用heartbeat来保持自己的状态.
 
 
-```Go
+```go
 func NewWorker(name, IP string, endpoints []string) *Worker {
-	cfg := client.Config{
-		Endpoints:               endpoints,
-		Transport:               client.DefaultTransport,
-		HeaderTimeoutPerRequest: time.Second,
-	}
+    cfg := client.Config{
+        Endpoints:               endpoints,
+        Transport:               client.DefaultTransport,
+        HeaderTimeoutPerRequest: time.Second,
+    }
 
-	etcdClient, err := client.New(cfg)
-	if err != nil {
-		log.Fatal("Error: cannot connec to etcd:", err)
-	}
+    etcdClient, err := client.New(cfg)
+    if err != nil {
+        log.Fatal("Error: cannot connec to etcd:", err)
+    }
 
-	w := &Worker{
-		Name: name,
-		IP: IP,
-		KeysAPI: client.NewKeysAPI(etcdClient)
-		
-	}
-	go w.HeartBeat()
-	return w
+    w := &Worker{
+        Name: name,
+        IP: IP,
+        KeysAPI: client.NewKeysAPI(etcdClient)
+        
+    }
+    go w.HeartBeat()
+    return w
 }
 
 func (w *Worker) HeartBeat() {
-	api := w.KeysAPI
+    api := w.KeysAPI
 
-	for {
-		info := &WorkerInfo{
-			Name: w.Name,
-			IP:   w.IP,
-			CPU:  runtime.NumCPU(),
-		}
+    for {
+        info := &WorkerInfo{
+            Name: w.Name,
+            IP:   w.IP,
+            CPU:  runtime.NumCPU(),
+        }
 
-		key := "workers/" + w.Name
-		value, _ := json.Marshal(info)
+        key := "workers/" + w.Name
+        value, _ := json.Marshal(info)
 
-		_, err := api.Set(context.Background(), key, string(value), &client.SetOptions{
-			TTL: time.Second * 10,
-		})
-		if err != nil {
-			log.Println("Error update workerInfo:", err)
-		}
-		time.Sleep(time.Second * 3)
-	}
+        _, err := api.Set(context.Background(), key, string(value), &client.SetOptions{
+            TTL: time.Second * 10,
+        })
+        if err != nil {
+            log.Println("Error update workerInfo:", err)
+        }
+        time.Sleep(time.Second * 3)
+    }
 }
 ```
 完整的代码可以在在github [etcd-service-discovery](http://github.com/daizuozhuo/etcd-service-discovery)上下载.
