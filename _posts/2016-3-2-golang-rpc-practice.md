@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Golang RPC 实践及改进
+title: Golang标准库RPC实践及改进
 ---
 一直用Golang标准库里的的RPC package来进行远程调用,简单好用.
 但是随着任务数量的增大, 发现简单的像包里面的示例那样的代码出现了各种各样的问题,下面就把我踩过的一些坑记录一下吧.
@@ -82,6 +82,8 @@ net.DialTimeout函数.
 注意server这边读写都有timeout,但是client这边只有写有timeout,因为读的话并不能预知任务完成的时间.
 于是就有了接下来这个版本的rpc,几十万个任务下来没有任何问题.
 
+完整的代码可以在在github [rpc-example](http://github.com/daizuozhuo/rpc-example)上下载.
+
 server.go
 
 ```go
@@ -95,6 +97,15 @@ func TimeoutCoder(f func(interface{}) error, e interface{}, msg string) error {
         return fmt.Errorf("Timeout %s", msg)
     }
 }
+
+type gobServerCodec struct {
+    rwc    io.ReadWriteCloser
+    dec    *gob.Decoder
+    enc    *gob.Encoder
+    encBuf *bufio.Writer
+    closed bool
+}
+
 func (c *gobServerCodec) ReadRequestHeader(r *rpc.Request) error {
     return TimeoutCoder(c.dec.Decode, r, "server read request header")
 }
