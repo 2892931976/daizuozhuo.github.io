@@ -6,7 +6,7 @@ permalink: /about/
 
 # I like to make great ideas happen!
 
-### Cloud Computing, Distributed Systems and Machine Learning
+### Big Data Machine Learning
 I am currently working in Amazon. My working area includes big data technology and distributed maching learning.
 See my [resume](/images/zuozhuo.pdf).
 
